@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Live CCTV Analysis - IADL-CDE (Job {{ job.id }}){% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1 class="page-title">Live Analysis Feed</h1>
+    <p class="page-description" style="display: flex; align-items: center; gap: 0.75rem;">
+      <span>File: <strong>{{ job.video_name }}</strong></span>
+      <span>•</span>
+      <span>Job ID: <code style="color: var(--accent-cyan);">{{ job.id }}</code></span>
+      <span>•</span>
+      <span>Calib: {{ job.calib_seconds }}s</span>
+    </p>
+  </div>
+  <div>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.5rem 1rem;">
+      <span>&larr;</span> New Analysis
+    </a>
+  </div>
+</div>
+
+<!-- Anomaly Alert Banner -->
+<div id="statusBanner" class="status-banner normal">
+  <div style="display: flex; align-items: center; gap: 0.65rem;">
+    <span id="statusIcon">🟢</span>
+    <span id="statusTitle">SCENE NORMAL</span>
+  </div>
+  <div id="statusSub" style="font-size: 0.85rem; font-weight: 500;">
+    Monitoring frame reconstruction error...
+  </div>
+</div>
+
+<div class="watch-layout">
+  <!-- Left Column: Video Feed & Line Chart -->
+  <div>
+    <!-- MJPEG Stream Container -->
+    <div class="video-container" id="videoContainer">
+      <img id="streamVideo" class="stream-frame" src="{{ url_for('stream', job_id=job.id) }}" alt="Live Annotated Stream">
+    </div>
+
+    <!-- Progress Indicator -->
+    <div class="progress-container">
+      <div class="progress-header">
+        <span id="jobStatusText">Analysis in progress...</span>
+        <span id="jobProgressPercent">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="jobProgressBar" style="width: 0%;"></div>
+      </div>
+    </div>
+
+    <!-- Live Line Chart -->
+    <div class="card" style="margin-top: 1.5rem;">
+      <div class="card-title">
+        <span>Anomaly Score vs Dynamic Threshold</span>
+        <span style="font-size: 0.75rem; color: var(--text-dim); font-weight: normal;">Live Chart.js</span>
+      </div>
+      <div style="position: relative; height: 260px; width: 100%;">
+        <canvas id="anomalyChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Real-time Stats, Alert Table & Finish Summary -->
+  <div>
+    <!-- Live Stats HUD Card -->
+    <div class="card" style="margin-bottom: 1.25rem;">
+      <div class="card-title">
+        <span>Real-time Telemetry</span>
+        <!-- Density Badge: Green Sparse, Orange Medium, Red Dense -->
+        <div id="densityBadge" class="density-badge density-sparse">
+          <span id="densityText">SPARSE</span>
+          <span id="densityConf" style="font-size: 0.75rem; opacity: 0.9;">(0%)</span>
+        </div>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-box">
+          <div class="metric-label">Anomaly Score</div>
+          <div class="metric-value" id="curScore">0.0000</div>
+          <div class="metric-sub" id="curScoreSub">Norm. error</div>
+        </div>
+
+        <div class="metric-box">
+          <div class="metric-label">Dynamic Threshold</div>
+          <div class="metric-value" id="curThreshold">0.0000</div>
+          <div class="metric-sub" id="curThresholdSub">Adaptive cut-off</div>
+        </div>
+
+        <div class="metric-box">
+          <div class="metric-label">Playback Time</div>
+          <div class="metric-value" id="curTime">0.0s</div>
+          <div class="metric-sub">Frame: <span id="curFrame">0</span></div>
+        </div>
+
+        <div class="metric-box">
+          <div class="metric-label">Alert Boxes</div>
+          <div class="metric-value" id="curBoxes" style="color: #fca5a5;">0</div>
+          <div class="metric-sub">Spatial anomalies</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert Log Table -->
+    <div class="card" style="margin-bottom: 1.25rem;">
+      <div class="card-title">
+        <span>Alert Event Log</span>
+        <span id="alertCountBadge" class="system-status-indicator" style="font-size: 0.75rem;">0 Events</span>
+      </div>
+      <p style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 0.75rem;">
+        Anomalies occurring within 2.0s are merged into a continuous event.
+      </p>
+
+      <div class="table-container">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Start (s)</th>
+              <th>End (s)</th>
+              <th>Peak Score</th>
+              <th>Density</th>
+            </tr>
+          </thead>
+          <tbody id="alertLogBody">
+            <tr id="emptyAlertRow">
+              <td colspan="5" class="empty-state">No anomaly events detected yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Summary Card (Revealed when processing finishes) -->
+    <div class="card summary-card" id="summaryCard">
+      <div class="card-title" style="color: #34d399;">
+        <span>✅ Analysis Complete</span>
+        <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-dim);" id="summaryDuration">0.0s</span>
+      </div>
+
+      <div class="summary-stats-grid">
+        <div class="summary-box">
+          <div class="metric-label">Alert Events</div>
+          <div class="summary-num" id="sumAlertEvents" style="color: #ef4444;">0</div>
+        </div>
+        <div class="summary-box">
+          <div class="metric-label">Alert Frames</div>
+          <div class="summary-num" id="sumAlertFramesPct">0.0%</div>
+        </div>
+        <div class="summary-box">
+          <div class="metric-label">Total Frames</div>
+          <div class="summary-num" id="sumTotalFrames">0</div>
+        </div>
+      </div>
+
+      <!-- Density Distribution Visual Bar -->
+      <div style="margin: 1rem 0;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+          <span>Crowd Density Distribution:</span>
+          <span id="distSummaryLabel">Sparse 0% | Medium 0% | Dense 0%</span>
+        </div>
+        <div class="density-distribution-bar">
+          <div class="dist-sparse" id="distBarSparse" style="width: 100%;" title="Sparse"></div>
+          <div class="dist-medium" id="distBarMedium" style="width: 0%;" title="Medium"></div>
+          <div class="dist-dense" id="distBarDense" style="width: 0%;" title="Dense"></div>
+        </div>
+      </div>
+
+      <!-- Download Actions -->
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.25rem;">
+        <a id="downloadVideoBtn" href="{{ url_for('result', job_id=job.id) }}" class="btn btn-primary" download>
+          <span>📥</span> Download Annotated Video (.mp4)
+        </a>
+        <a id="downloadCsvBtn" href="{{ url_for('stats_csv', job_id=job.id) }}" class="btn btn-secondary" download>
+          <span>📊</span> Download Per-Frame Stats (.csv)
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  window.JOB_ID = "{{ job.id }}";
+</script>
+<script src="{{ url_for('static', filename='js/watch.js') }}"></script>
+{% endblock %}

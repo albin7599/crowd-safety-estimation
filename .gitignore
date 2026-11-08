@@ -1,0 +1,46 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE / Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Runtime uploads and results (keep directory structure with .gitkeep)
+uploads/*
+!uploads/.gitkeep
+results/*
+!results/.gitkeep
+
+# Temporary and video files
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Unpacked PyTorch weight caches
+iadl_cde1/webapp/weights/density/
+iadl_cde1/webapp/weights/predictor/
+
+# PyTorch Model Weights
+# Note: models/density.pt is ~108 MB and exceeds GitHub's 100 MB hard limit.
+# Uncomment if using Git LFS instead of excluding:
+*.pt
+*.pth

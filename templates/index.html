@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Analyze Video - IADL-CDE Crowd Safety{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">CCTV Crowd Safety Analysis</h1>
+  <p class="page-description">
+    Upload CCTV footage for real-time crowd density classification (sparse, medium, dense) and next-frame spatial anomaly detection.
+  </p>
+</div>
+
+{% if error %}
+<div class="status-banner alert" style="margin-bottom: 1.5rem;">
+  <span>⚠️ {{ error }}</span>
+</div>
+{% endif %}
+
+<div class="card" style="max-width: 780px; margin: 0 auto;">
+  <form id="uploadForm" action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data">
+    <!-- Drag & Drop Zone -->
+    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Drop CCTV video file here or click to browse">
+      <div class="dropzone-icon">📁</div>
+      <div class="dropzone-text">Drag & drop your CCTV video here</div>
+      <div class="dropzone-subtext">Supports MP4, MOV, AVI up to 500 MB</div>
+      <input type="file" id="videoInput" name="video" accept=".mp4,.mov,.avi,video/mp4,video/quicktime,video/x-msvideo" style="display: none;" required>
+    </div>
+
+    <!-- File details preview -->
+    <div class="file-preview" id="filePreview">
+      <div>
+        <div id="previewFilename" style="font-weight: 600; color: #fff;">-</div>
+        <div id="previewFilesize" style="font-size: 0.8rem; color: var(--text-muted);">-</div>
+      </div>
+      <button type="button" class="btn btn-secondary" id="removeFileBtn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">Change</button>
+    </div>
+
+    <div style="margin-top: 1.75rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+      <h2 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Analysis & Calibration Settings</h2>
+
+      <!-- Calibration Normal Checkbox -->
+      <div class="form-group">
+        <label class="checkbox-group">
+          <input type="checkbox" id="calibNormalCheckbox" name="calib_normal" value="true" checked class="checkbox-input">
+          <div>
+            <span style="font-size: 0.9rem; font-weight: 600; color: #fff;">First seconds are normal activity</span>
+            <p class="form-text">
+              When enabled, the opening seconds of the video are assumed normal and dynamically calibrate anomaly score thresholds to this camera angle and lighting.
+            </p>
+          </div>
+        </label>
+      </div>
+
+      <!-- Calibration Seconds Input -->
+      <div class="form-group" id="calibSecondsGroup">
+        <label for="calibSecondsInput" class="form-label">Calibration Duration (Seconds)</label>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <input type="number" id="calibSecondsInput" name="calib_seconds" value="10" min="0" max="120" class="form-input" style="max-width: 140px;">
+          <span style="font-size: 0.85rem; color: var(--text-dim);">seconds (0 = use pre-saved thresholds from config)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Progress Bar (hidden by default) -->
+    <div id="uploadProgressContainer" style="display: none; margin-top: 1.25rem;">
+      <div class="progress-header">
+        <span id="uploadStatusText">Uploading video to server...</span>
+        <span id="uploadPercentText">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="uploadProgressBar" style="width: 0%;"></div>
+      </div>
+    </div>
+
+    <div style="margin-top: 1.75rem; display: flex; justify-content: flex-end; gap: 1rem;">
+      <button type="submit" id="submitBtn" class="btn btn-primary" style="min-width: 180px;">
+        <span>▶</span> Start Analysis
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}IADL-CDE: CCTV Crowd Safety & Anomaly Detection{% endblock %}</title>
+  <meta name="description" content="Real-time CCTV Crowd Density Estimation & Spatial Anomaly Detection powered by Deep Learning">
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <header class="header">
+    <div class="nav-container">
+      <a href="{{ url_for('index') }}" class="brand">
+        <span class="brand-badge">IADL-CDE</span>
+        <div>
+          <span class="brand-title">Crowd Safety System</span>
+          <span class="brand-subtitle">CCTV Density & Anomaly Monitoring</span>
+        </div>
+      </a>
+
+      <nav class="nav-links">
+        <a href="{{ url_for('index') }}" class="nav-link {% if request.path == '/' %}active{% endif %}">
+          <span>📹</span> Analyze Video
+        </a>
+        <a href="{{ url_for('camera') }}" class="nav-link {% if request.path == '/camera' %}active{% endif %}">
+          <span>⚙️</span> Camera Adaptation
+        </a>
+
+        <div class="system-status-indicator" id="systemHealthBadge" title="System Status">
+          <span class="dot dot-green" id="healthDot"></span>
+          <span id="healthText">Device: {{ model_info.device|upper }}</span>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content">
+    {% block content %}{% endblock %}
+
+    <!-- Honesty Notes Info Box -->
+    <section class="honesty-box" aria-label="Operational Honesty Notes">
+      <div class="honesty-header">
+        <span>ℹ️</span> Operational Parameters & Honesty Notes
+      </div>
+      <ul class="honesty-list">
+        {% for note in honesty_notes %}
+        <li class="honesty-item">
+          <strong>{{ note.title }}:</strong>&nbsp;{{ note.detail }}
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>IADL-CDE CCTV Crowd Safety Monitoring System &copy; 2026. Built with Flask, PyTorch & OpenCV.</p>
+  </footer>
+
+  <script>
+    // Periodic health check
+    async function checkHealth() {
+      try {
+        const res = await fetch("{{ url_for('health') }}");
+        const data = await res.json();
+        const dot = document.getElementById("healthDot");
+        const txt = document.getElementById("healthText");
+        if (data.status === "ok") {
+          dot.className = "dot dot-green";
+          txt.textContent = `${data.device.toUpperCase()} | ${data.active_model === 'camera' ? 'Camera Model' : 'Default Model'}`;
+        } else {
+          dot.className = "dot dot-yellow";
+          txt.textContent = "Degraded";
+        }
+      } catch (err) {
+        const dot = document.getElementById("healthDot");
+        const txt = document.getElementById("healthText");
+        if (dot && txt) {
+          dot.className = "dot dot-yellow";
+          txt.textContent = "Offline";
+        }
+      }
+    }
+    checkHealth();
+    setInterval(checkHealth, 15000);
+  </script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Camera Fine-Tuning - IADL-CDE Crowd Safety{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Camera Adaptation & Fine-Tuning</h1>
+  <p class="page-description">
+    Adapt the next-frame spatial predictor to a fixed CCTV angle using 30 to 60 seconds of normal-only footage.
+    Weights are saved as <code>predictor_cam.pt</code> and <code>config_cam.json</code> without touching base weights.
+  </p>
+</div>
+
+<div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; align-items: start;">
+  <!-- Fine-Tune Upload Form -->
+  <div class="card">
+    <div class="card-title">
+      <span>Upload Normal Camera Footage</span>
+      <span style="font-size: 0.8rem; color: var(--accent-cyan);">Single Angle Adaptation</span>
+    </div>
+
+    <form id="finetuneForm" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label" for="clipFile">Normal Activity Video Clip (30 - 60s)</label>
+        <input type="file" id="clipFile" name="clip" accept=".mp4,.mov,.avi" class="form-input" required>
+        <p class="form-text">Ensure this footage contains strictly normal crowd behavior (no vehicles, bicycles, or rapid unusual motions).</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label" for="secondsInput">Footage Limit (Seconds)</label>
+          <input type="number" id="secondsInput" name="seconds" value="40" min="20" max="90" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="epochsInput">Fine-tuning Epochs</label>
+          <input type="number" id="epochsInput" name="epochs" value="15" min="5" max="50" class="form-input">
+        </div>
+      </div>
+
+      <!-- Fine-tune progress container -->
+      <div id="ftProgressBox" style="display: none; margin: 1.25rem 0; padding: 1rem; background: rgba(31, 41, 55, 0.5); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <div class="progress-header">
+          <span id="ftStatusMessage" style="font-weight: 600; color: #fff;">Initializing fine-tuning...</span>
+          <span id="ftPercentText">0%</span>
+        </div>
+        <div class="progress-bar-bg" style="margin-top: 0.5rem;">
+          <div class="progress-bar-fill" id="ftProgressBar" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end;">
+        <button type="submit" id="ftSubmitBtn" class="btn btn-primary">
+          <span>⚡</span> Start Camera Fine-Tuning
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Model Management & Switcher Card -->
+  <div class="card">
+    <div class="card-title">
+      <span>Active Engine Configuration</span>
+      <span class="system-status-indicator" id="activeModelBadge">Default UCSD</span>
+    </div>
+
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+      Toggle which predictor weights the background analysis pipeline uses for incoming video uploads.
+    </p>
+
+    <div style="background: rgba(17, 24, 39, 0.9); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.25rem;">
+      <div style="font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.25rem;">Current Model In Memory</div>
+      <div id="loadedModelName" style="font-size: 1.1rem; font-weight: 700; color: #fff;">Default Baseline (UCSD Ped2)</div>
+      <div id="loadedModelThresholds" style="font-size: 0.8rem; color: var(--accent-cyan); font-family: var(--font-mono); margin-top: 0.35rem;">
+        Pixel Thr: - | Frame Thr: -
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Select Active Inference Model</label>
+      <div style="display: flex; gap: 0.75rem;">
+        <button type="button" id="selectDefaultBtn" class="btn btn-secondary" style="flex: 1;">
+          Default Baseline
+        </button>
+        <button type="button" id="selectCameraBtn" class="btn btn-secondary" style="flex: 1;" disabled>
+          Camera Adapted
+        </button>
+      </div>
+      <p id="camModelAvailabilityText" class="form-text" style="margin-top: 0.5rem;">
+        Camera model not yet trained. Upload a normal clip to create it.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/camera.js') }}"></script>
+{% endblock %}

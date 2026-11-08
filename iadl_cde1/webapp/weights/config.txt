@@ -1,0 +1,14 @@
+{
+  "class_thresholds": [
+    85,
+    270
+  ],
+  "density_factor": {
+    "0": 1.0,
+    "1": 1.15,
+    "2": 1.3
+  },
+  "pix_thr": 0.016812650486826897,
+  "frame_thr": 0.027452812155708668,
+  "predictor_file": "predictor.pt"
+}
