@@ -44,3 +44,4 @@ iadl_cde1/webapp/weights/predictor/
 # Uncomment if using Git LFS instead of excluding:
 *.pt
 *.pth
+
